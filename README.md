@@ -6,4 +6,4 @@
 - Download this script wherever you plan to run
 - Edit the following variables at the beginning of poll.py
 > pincode, sender_email, to_email, sender_password_base64_encoded
-- Run the script with `python poll.py`
+- Run the script with `python3 poll.py`

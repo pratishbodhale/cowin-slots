@@ -5,6 +5,9 @@ import smtplib
 import base64
 from datetime import datetime
 from datetime import date
+import pytz
+
+IST = pytz.timezone('Asia/Kolkata')
 
 ## Define the user specific variables here 
 pincode = ''
@@ -23,13 +26,13 @@ Subject: %s
 
 def sendEmail(center):
     try: 
-        print "Establishing email server connection ..."
+        print("Establishing email server connection ...")
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo() 
         server.starttls()
         server.ehlo()
 
-        server.login(sender_email, base64.b64decode(sender_password_base64_encoded)) 
+        server.login(sender_email, base64.b64decode(sender_password_base64_encoded.encode()).decode()) 
 
         subject = 'Slot available for vaccination'
         body = json.dumps(center)
@@ -38,9 +41,9 @@ def sendEmail(center):
         server.sendmail(sender_email, to_email, email_text) 
         server.close()
 
-        print "Email sent!"
+        print("Email sent!")
     except Exception as e:
-        print "Exception has occured"
+        print("Exception has occured")
         print(e)
 
 def checkForSlots(response):
@@ -48,25 +51,31 @@ def checkForSlots(response):
     for center in response["centers"]:
         for sessions in center["sessions"]:
             if sessions["available_capacity"] > 0:
-                print "Available at: "
-                print center
+                print("Available at: ", center)
                 found = True
                 sendEmail(center)
 
     if found == False:
-        print "No Available centers found at: " + datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+        print("No Available centers found at: " + datetime.now(IST).strftime("%m/%d/%Y, %H:%M:%S"))
 
 
 def main():
     starttime = time.time()
     while True:
-        dateString = date.today().strftime("%d-%m-%y")
-        connection = http.client.HTTPSConnection("cdn-api.co-vin.in")
-        connection.request("GET", "/api/v2/appointment/sessions/public/calendarByPin?pincode=441302&date=" + dateString)
-        response = connection.getresponse()
-        stringResponse = response.read().decode()
-        jsonResponse = json.loads(stringResponse)
-        checkForSlots(jsonResponse)
+        try:
+            connection = http.client.HTTPSConnection("cdn-api.co-vin.in")
+            dateString = datetime.now(IST).strftime("%d-%m-%y")
+
+            connection.request("GET", "/api/v2/appointment/sessions/public/calendarByPin?pincode=441302&date=" + dateString)
+            response = connection.getresponse()
+            stringResponse = response.read().decode()
+            jsonResponse = json.loads(stringResponse)
+            
+            checkForSlots(jsonResponse)
+        except Exception as e:
+            print("Exception has occured in main")
+            print(e)
+
         time.sleep(poll_duration_in_secs - ((time.time() - starttime) % poll_duration_in_secs))
 
 if __name__ == "__main__":
